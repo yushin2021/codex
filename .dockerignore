@@ -1,0 +1,16 @@
+.git
+.gitignore
+.gitattributes
+node_modules
+vendor
+storage
+bootstrap/cache
+.DS_Store
+.idea
+.vscode
+docker-compose.override.yml
+*.log
+tmp
+dist
+build
+
