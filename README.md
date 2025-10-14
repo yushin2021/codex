@@ -210,6 +210,34 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/logout -WebSession
 - `.env` は `SESSION_DRIVER=file`、`CACHE_STORE=file` を推奨（既に変更済み）
 - SPA からは `axios` 等で `withCredentials: true` を設定し、まず `/sanctum/csrf-cookie` を叩いてから `/api/login`→`/api/me`
 
+## .env 追記項目（Sanctum / SPA 用）
+
+以下を `.env`（必要なら `.env.example` も）に設定してください。
+
+```
+# アプリURL（Nginx ポートに合わせる）
+APP_URL=http://localhost:8080
+
+# セッションクッキーのドメイン
+SESSION_DOMAIN=localhost
+
+# Vite 開発サーバからのクッキー共有（stateful ドメイン）
+SANCTUM_STATEFUL_DOMAINS=localhost:5173,127.0.0.1:5173
+
+# ローカル開発では HTTPS ではないため false
+SESSION_SECURE_COOKIE=false
+
+# 推奨（既に反映済み）
+SESSION_DRIVER=file
+CACHE_STORE=file
+```
+
+反映コマンド（設定変更後）:
+
+```
+docker compose run --rm app php artisan config:clear
+```
+
 ## 権限エラーの対処（Windows での bind mount）
 Windows で `storage` や `bootstrap/cache` の書き込みで `Permission denied` が出る場合は、以下を実行してください（開発用途）。
 
