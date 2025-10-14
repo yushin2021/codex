@@ -148,6 +148,28 @@ $ docker compose run --rm -w /frontend node npm run build
 - axios:^1.7.0, react-router-dom:^6.26.0
 - @tanstack/react-query:^5.51.0
 
+## DB マイグレーション／シーディング
+
+要件テーブル（m_users, m_auth, t_news, t_news_reads, signup_tokens, password_reset_tokens）を追加済みです。
+
+1) マイグレーション実行
+```
+$ docker compose run --rm app php artisan migrate
+```
+
+2) シーディング（ダミーユーザー3件 + 対応する認証3件）
+```
+$ docker compose run --rm app php artisan db:seed
+```
+
+テーブル概要
+- m_users: id, code(uniq), name, mail(uniq), enabled, timestamps
+- m_auth: id, user_id(uniq, FK m_users.id), email(uniq), password, remember_token, timestamps
+- t_news: id, type, title, content, created_id(FK), created_timestamp, updated_id(FK, nullable), updated_timestamp(nullable)
+- t_news_reads: id, news_id(FK), user_id(FK), read_at
+- signup_tokens: id, email, token(uniq), expires_at, used_at(nullable), created_at
+- password_reset_tokens: id, email, token(uniq), expires_at, used_at(nullable), created_at
+
 ## 権限エラーの対処（Windows での bind mount）
 Windows で `storage` や `bootstrap/cache` の書き込みで `Permission denied` が出る場合は、以下を実行してください（開発用途）。
 
