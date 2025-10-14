@@ -10,6 +10,8 @@
 
 # Node / Vite
 /node_modules/
+/frontend/node_modules/
+/frontend/.vite/
 /public/hot
 /public/build/
 /pnpm-lock.yaml
@@ -23,4 +25,3 @@ Thumbs.db
 # Docker
 /docker/**/.env
 /.docker-cache/
-
