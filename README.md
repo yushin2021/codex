@@ -170,6 +170,46 @@ $ docker compose run --rm app php artisan db:seed
 - signup_tokens: id, email, token(uniq), expires_at, used_at(nullable), created_at
 - password_reset_tokens: id, email, token(uniq), expires_at, used_at(nullable), created_at
 
+## SPA 認証 API（Sanctum + m_auth）
+
+依存パッケージを追加（非対話・明示バージョン）。ネットワーク環境で以下を実行してください。
+
+```
+$ docker compose run --rm app bash -lc "composer -n require laravel/sanctum:^4.0 spatie/laravel-query-builder:^5.0 doctrine/dbal:^4.0"
+```
+
+アプリ構成
+- 認証プロバイダ: `m_auth`（モデル: `App\Models\UserAuth`）を `session` ガード（web）で使用
+- ユーザー本体: `m_users`（モデル: `App\Models\User`）を `UserAuth::user()` で参照
+- ルート: `/api/login`, `/api/logout`, `/api/me`（`bootstrap/app.php` で `api.php` を有効化済み）
+- ミドルウェア: `EnsureFrontendRequestsAreStateful` を `web` に付与（SPA 用）
+
+動作確認フロー（PowerShell 例）
+1) CSRF 初期化（クッキー取得）
+```
+Invoke-WebRequest -UseBasicParsing http://localhost:8080/sanctum/csrf-cookie -SessionVariable s
+```
+
+2) ログイン（email/password はシーダーの値: alice@example.com / Password!1 等）
+```
+$body = @{ email = 'alice@example.com'; password = 'Password!1' } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/login -WebSession $s -ContentType 'application/json' -Body $body
+```
+
+3) ログイン後の状態確認
+```
+Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/me -WebSession $s
+```
+
+4) ログアウト
+```
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/logout -WebSession $s
+```
+
+補足
+- `.env` は `SESSION_DRIVER=file`、`CACHE_STORE=file` を推奨（既に変更済み）
+- SPA からは `axios` 等で `withCredentials: true` を設定し、まず `/sanctum/csrf-cookie` を叩いてから `/api/login`→`/api/me`
+
 ## 権限エラーの対処（Windows での bind mount）
 Windows で `storage` や `bootstrap/cache` の書き込みで `Permission denied` が出る場合は、以下を実行してください（開発用途）。
 
