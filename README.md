@@ -110,9 +110,43 @@ $ docker compose run --rm app bash -lc "composer -n require laravel/sanctum:^4.0
 
 - 依存が入っていれば、開発サーバ起動:
 ```
-$ docker compose run --rm --service-ports node npm run dev -- --host 0.0.0.0
+$ docker compose run --rm --service-ports -w /frontend node npm run dev
 ```
   - Vite: http://localhost:5173/
+
+## フロントエンド SPA（/frontend）
+
+React + Vite + TypeScript + Tailwind の雛形を `frontend` に配置しています。ビルド成果物は Laravel 側の `src/public/build` に出力され、Nginx から配信されます。
+
+1) 依存インストール（npm / lock コミット方針）
+
+PowerShell でも動くよう、コンテナ内で `sh -lc` を使って分岐しています。
+
+```
+$ docker compose run --rm -w /frontend node sh -lc "npm ci || npm install"
+```
+
+2) 開発サーバ（Vite）
+
+```
+$ docker compose run --rm --service-ports -w /frontend node npm run dev
+```
+- http://localhost:5173/
+
+3) 本番ビルド（Laravel の `src/public/build` へ出力）
+
+```
+$ docker compose run --rm -w /frontend node npm run build
+```
+- ビルド後は http://localhost:8080/build/ で SPA を確認可能
+
+4) 主要ライブラリのバージョン（明示）
+- react:^18.2.0, react-dom:^18.2.0
+- vite:^5.4.0, @vitejs/plugin-react:^4.3.0
+- typescript:^5.4.0
+- tailwindcss:^3.4.0, postcss:^8.4.0, autoprefixer:^10.4.0
+- axios:^1.7.0, react-router-dom:^6.26.0
+- @tanstack/react-query:^5.51.0
 
 ## 権限エラーの対処（Windows での bind mount）
 Windows で `storage` や `bootstrap/cache` の書き込みで `Permission denied` が出る場合は、以下を実行してください（開発用途）。

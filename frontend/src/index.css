@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 任意のカスタムスタイル */
+html, body, #root {
+  height: 100%;
+}
+
