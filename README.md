@@ -320,6 +320,22 @@ PHP-FPM/OPcache
 - CORS と `SANCTUM_STATEFUL_DOMAINS` は最小権限に
 - 監視/ログ（Nginx/PHP-FPM）とローテーションを整備
 
+## タイムゾーン（DB / アプリを東京に統一）
+
+- MySQL（コンテナ）
+  - `docker-compose.yml` の `mysql.environment` に `TZ: Asia/Tokyo` を追加済み
+  - さらにサーバのデフォルトタイムゾーンを固定: `--default-time-zone=+09:00`（コマンドに追加済み）
+  - 反映手順:
+    - `docker compose restart mysql`
+    - 確認: `docker compose exec mysql mysql -uroot -proot -e "SELECT @@global.time_zone, @@session.time_zone, NOW();"`
+      - 期待: `SYSTEM` / `SYSTEM`（または `+09:00`）と、JST 時刻
+- Laravel（アプリ）
+  - `.env` の `APP_TIMEZONE=Asia/Tokyo` に変更済み
+  - 反映: `docker compose run --rm app php artisan config:clear`
+
+注意
+- 既に発行済みのトークン（signup/password reset）は旧タイムゾーン基準で作成されているため、再発行してください。
+
 ## .env 追記項目（Sanctum / SPA 用）
 
 以下を `.env`（必要なら `.env.example` も）に設定してください。
