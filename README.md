@@ -247,6 +247,27 @@ $body2 = @{ code='U9000'; name='Renamed'; mail='new.user@example.com'; enabled=0
 Invoke-RestMethod -Method Put -Uri http://localhost:8080/api/users/1 -WebSession $s -ContentType 'application/json' -Headers @{ 'X-XSRF-TOKEN'=$xsrf } -Body $body2
 ```
 
+## News API（未読一覧 / 既読登録）
+
+エンドポイント（認証必須: `auth:sanctum`）
+- GET  `/api/news/unread?per_page=` … 自分の既読（t_news_reads）を除外して作成日時降順で返却
+- POST `/api/news/read` { `news_id` } … 既読登録（idempotent: 同じ組み合わせは1件に集約）
+
+PowerShell 例（ログイン・CSRF 初期化済みの前提）
+```
+# 未読一覧（必要に応じて per_page を指定）
+Invoke-RestMethod -Method Get -Uri "http://localhost:8080/api/news/unread?per_page=10" -WebSession $s
+
+# 既読登録（CSRF 必須）
+$xsrf = ([System.Web.HttpUtility]::UrlDecode(($s.Cookies.GetCookies('http://localhost:8080') | ? { $_.Name -eq 'XSRF-TOKEN' }).Value))
+$body = @{ news_id = 1 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/news/read -WebSession $s -ContentType 'application/json' -Headers @{ 'X-XSRF-TOKEN'=$xsrf } -Body $body
+```
+
+レスポンス例（概略）
+- 未読一覧: `data` に `{ id, type, title, created_timestamp }` の配列、`meta`/`links` にページング情報
+- 既読登録: `{ news_id, user_id, read_at }`
+
 ## .env 追記項目（Sanctum / SPA 用）
 
 以下を `.env`（必要なら `.env.example` も）に設定してください。
