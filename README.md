@@ -268,6 +268,58 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/news/read -WebSess
 - 未読一覧: `data` に `{ id, type, title, created_timestamp }` の配列、`meta`/`links` にページング情報
 - 既読登録: `{ news_id, user_id, read_at }`
 
+## 本番運用のポイント（必読）
+
+環境変数（.env）
+- 基本: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://<api-host>`
+- セッション/Cookie（HTTPS 前提）
+  - 同一ドメイン系（例: api.example.com で API と SPA を同一オリジン配信）
+    - `SESSION_DOMAIN=null`（または `.example.com`）
+    - `SESSION_SAME_SITE=lax`
+    - `SESSION_SECURE_COOKIE=true`
+  - 異なるオリジン（例: frontend.example.com → api.example.com）
+    - `SESSION_SAME_SITE=none`
+    - `SESSION_SECURE_COOKIE=true`
+    - `SANCTUM_STATEFUL_DOMAINS=frontend.example.com`（カンマ区切りで列挙）
+- DB 接続は本番値に設定
+
+CORS（src/config/cors.php）
+- `allowed_origins` を本番フロントの Origin のみに限定（localhost:5173 は削除）
+- `supports_credentials` は true（Cookie 送受信用）
+
+フロント資産（ビルド/配信）
+- ビルド実行（/frontend）
+```
+docker compose run --rm -w /frontend node npm ci
+docker compose run --rm -w /frontend node npm run build
+```
+- 出力先: `src/public/build`（Nginx が静的配信）
+
+Nginx（SPA ルーティングのフォールバック）
+- 直接 `/build/users` などにアクセスした際の 404 を防ぐには、`/build` 配下のフォールバックを追加:
+```
+location ^~ /build/ {
+  try_files $uri /build/index.html;
+}
+```
+- もしくは Laravel 側で `/` をビュー返却して SPA を同一オリジン配信する構成に変更（必要なら案内します）
+
+Composer/キャッシュ最適化（コンテナ内）
+```
+docker compose run --rm app bash -lc "composer -n install --no-dev -o"
+docker compose run --rm app php artisan migrate --force
+docker compose run --rm app php artisan config:cache route:cache event:cache view:cache
+```
+
+PHP-FPM/OPcache
+- OPcache を有効化（本イメージは導入済）。本番では `opcache.validate_timestamps=0` を推奨
+- FPM の `pm`, `pm.max_children` 等は実行環境の CPU/メモリに合わせて調整
+
+セキュリティ/その他
+- `APP_KEY` が設定済みであること
+- CORS と `SANCTUM_STATEFUL_DOMAINS` は最小権限に
+- 監視/ログ（Nginx/PHP-FPM）とローテーションを整備
+
 ## .env 追記項目（Sanctum / SPA 用）
 
 以下を `.env`（必要なら `.env.example` も）に設定してください。

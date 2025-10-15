@@ -1,22 +1,61 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, initCsrf } from './lib/api';
 
-export default function App() {
+const qc = new QueryClient();
+
+function Header() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ['me'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/api/me');
+        return res.data;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  const onLogout = async () => {
+    await api.post('/api/logout');
+    await queryClient.invalidateQueries({ queryKey: ['me'] });
+    navigate('/login');
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800">
-      <div className="max-w-3xl mx-auto py-16 px-6">
-        <h1 className="text-3xl font-bold">React + Vite + TS + Tailwind</h1>
-        <p className="mt-4 text-sm text-gray-600">
-          ここは /frontend の SPA 雛形です。ビルドすると Laravel 側の
-          <code className="px-1">/public/build</code>
-          に成果物が出力され、Nginx が配信します。
-        </p>
-        <ul className="mt-6 list-disc pl-6 text-sm">
-          <li>開発: npm run dev</li>
-          <li>ビルド: npm run build</li>
-          <li>プレビュー: npm run preview</li>
-        </ul>
+    <header className="border-b bg-white">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <Link to="/" className="font-semibold">My App</Link>
+        <nav className="flex items-center gap-4 text-sm">
+          <Link to="/users" className="text-gray-700 hover:text-black">ユーザー一覧</Link>
+          {data?.user ? (
+            <>
+              <span className="text-gray-500">{data.user.name}</span>
+              <button onClick={onLogout} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">ログオフ</button>
+            </>
+          ) : (
+            <Link to="/login" className="text-gray-700 hover:text-black">ログイン</Link>
+          )}
+        </nav>
       </div>
-    </div>
+    </header>
   );
 }
 
+export default function App() {
+  useEffect(() => { initCsrf().catch(() => {}); }, []);
+  return (
+    <QueryClientProvider client={qc}>
+      <div className="min-h-screen bg-gray-50 text-gray-800">
+        <Header />
+        <main className="max-w-5xl mx-auto px-4 py-6">
+          <Outlet />
+        </main>
+      </div>
+    </QueryClientProvider>
+  );
+}
