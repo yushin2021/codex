@@ -7,6 +7,9 @@ import LoginPage from './pages/LoginPage';
 import TopPage from './pages/TopPage';
 import UsersListPage from './pages/UsersListPage';
 import UserFormPage from './pages/UserFormPage';
+import SignupPage from './pages/SignupPage';
+import PasswordForgotPage from './pages/PasswordForgotPage';
+import PasswordResetPage from './pages/PasswordResetPage';
 
 const router = createBrowserRouter([
   {
@@ -18,9 +21,9 @@ const router = createBrowserRouter([
       { path: '/users', element: <UsersListPage /> },
       { path: '/users/new', element: <UserFormPage /> },
       { path: '/users/:id/edit', element: <UserFormPage /> },
-      { path: '/signup', element: <div className="text-sm text-gray-500">未実装（トークン処理画面）</div> },
-      { path: '/password/forgot', element: <div className="text-sm text-gray-500">未実装（パスワードリセット送信）</div> },
-      { path: '/password/reset', element: <div className="text-sm text-gray-500">未実装（リセットフォーム）</div> },
+      { path: '/signup', element: <SignupPage /> },
+      { path: '/password/forgot', element: <PasswordForgotPage /> },
+      { path: '/password/reset', element: <PasswordResetPage /> },
     ],
   },
 ]);
