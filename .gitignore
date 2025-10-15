@@ -1,4 +1,4 @@
-# Laravel / PHP
+# Laravel / PHP (root)
 /vendor/
 /.env
 /.env.*
@@ -8,12 +8,24 @@
 /storage/logs/
 /bootstrap/cache/*.php
 
+# Laravel / PHP (src/ 下の本体)
+/src/vendor/
+/src/.env
+/src/.env.*
+!/src/.env.example
+/src/.phpunit.result.cache
+/src/storage/*.key
+/src/storage/logs/
+/src/bootstrap/cache/*.php
+
 # Node / Vite
 /node_modules/
 /frontend/node_modules/
 /frontend/.vite/
 /public/hot
 /public/build/
+/src/public/hot
+/src/public/build/
 /pnpm-lock.yaml
 
 # OS / IDE
