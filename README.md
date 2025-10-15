@@ -1,5 +1,12 @@
 # Laravel 11 + PHP 8.4 + MySQL 8.4 + Nginx + Node (Docker)
 
+【最短手順（まずはこれだけ）】
+
+1) 起動: `docker compose up -d --build`
+2) バックエンド: `docker compose run --rm app bash -lc "composer -n install && php artisan key:generate && php artisan migrate --seed"`
+3) フロント: `docker compose run --rm -w /frontend node sh -lc "npm ci && npm run build"`
+4) 確認: API → http://localhost:8080/ / SPA → http://localhost:8080/build/
+
 最小構成の Docker 環境です。Laravel プロジェクトは `src` ディレクトリに作成します（コンテナ内 `/var/www` にマウント）。`composer -n create-project laravel/laravel:^11.0 .` を `app` コンテナ内で実行します。
 
 - PHP: 8.4 (FPM)
@@ -12,6 +19,40 @@
 ## 事前準備
 - Docker Desktop for Windows (WSL2)
 - リポジトリを任意の場所に clone 済み
+
+## クイックスタート（クリーン環境）
+
+1) コンテナ起動（初回はビルドも）
+```
+docker compose up -d --build
+```
+
+2) バックエンド依存のインストール（Composer・非対話）
+```
+docker compose run --rm app bash -lc "composer -n install"
+```
+
+3) アプリキー生成 / マイグレーション＆シーディング
+```
+docker compose run --rm app php artisan key:generate
+docker compose run --rm app php artisan migrate --seed
+```
+
+4) フロントエンド（/frontend）をインストール＆ビルド（/src/public/build へ出力）
+```
+docker compose run --rm -w /frontend node sh -lc "npm ci"
+docker compose run --rm -w /frontend node npm run build
+```
+
+5) アクセス確認
+- API/Nginx: http://localhost:8080/
+- SPA（ビルド配信）: http://localhost:8080/build/
+- 開発時（Vite）: `docker compose run --rm --service-ports -w /frontend node npm run dev` → http://localhost:5173/
+
+6) 簡易シナリオ
+- ログイン（alice@example.com / Password!1）→ ヘッダーにユーザー名表示
+- ユーザー新規（/users → 新規）→ 作成成功で t_news に「ユーザー登録されました。」が記録
+- TOP に未読ニュースが出る → 詳細/既読ボタンで未読から除外
 
 ## 初回セットアップ
 
@@ -267,6 +308,29 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/news/read -WebSess
 レスポンス例（概略）
 - 未読一覧: `data` に `{ id, type, title, created_timestamp }` の配列、`meta`/`links` にページング情報
 - 既読登録: `{ news_id, user_id, read_at }`
+
+## トラブルシューティング（よくある問題）
+
+- MySQL が `unhealthy` のまま / 接続できない
+  - 数十秒待ってから `docker compose logs -f mysql` でエラー確認
+  - ポート競合（`13306`）の可能性 → `docker-compose.yml` の `mysql.ports` を変更
+  - 認証は MySQL 8.4 既定の `caching_sha2_password`。`--default-authentication-plugin` は不要（非推奨）
+
+- `storage` / `bootstrap/cache` の Permission denied（Windows）
+  - README の「権限エラーの対処」コマンドを実行（開発用途）
+
+- CSRF token mismatch（419）
+  - `.env` に `SANCTUM_STATEFUL_DOMAINS=localhost:5173,127.0.0.1:5173`
+  - `src/config/cors.php` の `allowed_origins` に 5173 を追加し、`supports_credentials=true`
+  - フロントは `withCredentials: true` で `/sanctum/csrf-cookie` → `/api/login`
+  - それでもダメな場合、Cookie（XSRF-TOKEN, laravel_session）/ヘッダ（X-XSRF-TOKEN）送受信をDevToolsで確認
+
+- ポート競合（8080/5173/13306）
+  - `docker-compose.yml` の `web.ports`/`node.ports`/`mysql.ports` を任意ポートへ変更
+
+- Docker Compose v2 の `version:` 警告
+  - 本構成は v2 記法で `version:` キーを置いていません（警告は出ません）
+
 
 ## 本番運用のポイント（必読）
 
