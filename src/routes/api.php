@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UsersController;
+use App\Http\Controllers\NewsController;
 use Illuminate\Support\Facades\Route;
 
 // SPA 認証 API（Sanctum + session cookie）
@@ -18,4 +19,8 @@ Route::middleware(['web', 'auth:sanctum'])->group(function () {
     Route::post('/users', [UsersController::class, 'store']);
     Route::get('/users/{id}', [UsersController::class, 'show']);
     Route::put('/users/{id}', [UsersController::class, 'update']);
+
+    // News (unread list and mark as read)
+    Route::get('/news/unread', [NewsController::class, 'unread']);
+    Route::post('/news/read', [NewsController::class, 'markRead']);
 });
