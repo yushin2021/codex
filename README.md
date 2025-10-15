@@ -210,6 +210,43 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/logout -WebSession
 - `.env` は `SESSION_DRIVER=file`、`CACHE_STORE=file` を推奨（既に変更済み）
 - SPA からは `axios` 等で `withCredentials: true` を設定し、まず `/sanctum/csrf-cookie` を叩いてから `/api/login`→`/api/me`
 
+## Users API（一覧/新規/取得/更新）
+
+エンドポイント（認証必須: `auth:sanctum`）
+- GET  `/api/users?q=&enabled=&sort=&dir=&page=`
+- POST `/api/users`（新規: 成功時 `t_news` に登録ログ）
+- GET  `/api/users/{id}`
+- PUT  `/api/users/{id}`
+
+バリデーション
+- code: required|max:10|regex(/^[0-9A-Za-z]+$/)|unique（更新時は自分を除外）
+- name: required|max:100
+- mail: required|email|unique（更新時は自分を除外）
+
+検索・絞込・ソート
+- `q`: code/name/mail の部分一致
+- `enabled`: 0 or 1 の絞込
+- `sort`: code|name|mail|created_at（`dir` に asc/desc）
+- ページング: `page`（必要に応じ `per_page` も指定可）
+
+PowerShell 例（ログイン済みの前提）
+```
+# 一覧
+Invoke-RestMethod -Method Get -Uri "http://localhost:8080/api/users?q=alice&enabled=1&sort=code&dir=asc&page=1" -WebSession $s
+
+# 新規（CSRF 必須）
+$xsrf = ([System.Web.HttpUtility]::UrlDecode(($s.Cookies.GetCookies('http://localhost:8080') | ? { $_.Name -eq 'XSRF-TOKEN' }).Value))
+$body = @{ code='U9000'; name='New User'; mail='new.user@example.com'; enabled=1 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/users -WebSession $s -ContentType 'application/json' -Headers @{ 'X-XSRF-TOKEN'=$xsrf } -Body $body
+
+# 取得
+Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/users/1 -WebSession $s
+
+# 更新（CSRF 必須）
+$body2 = @{ code='U9000'; name='Renamed'; mail='new.user@example.com'; enabled=0 } | ConvertTo-Json
+Invoke-RestMethod -Method Put -Uri http://localhost:8080/api/users/1 -WebSession $s -ContentType 'application/json' -Headers @{ 'X-XSRF-TOKEN'=$xsrf } -Body $body2
+```
+
 ## .env 追記項目（Sanctum / SPA 用）
 
 以下を `.env`（必要なら `.env.example` も）に設定してください。
