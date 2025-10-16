@@ -65,5 +65,17 @@ class NewsController extends Controller
             'read_at' => $read->read_at,
         ]);
     }
-}
 
+    public function show(int $id)
+    {
+        $n = News::findOrFail($id);
+        return response()->json([
+            'id' => $n->id,
+            'type' => $n->type,
+            'title' => $n->title,
+            'content' => $n->content,
+            'created_timestamp' => $n->created_timestamp,
+            'updated_timestamp' => $n->updated_timestamp,
+        ]);
+    }
+}

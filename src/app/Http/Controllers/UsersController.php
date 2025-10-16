@@ -34,6 +34,7 @@ class UsersController extends Controller
                 AllowedSort::field('code'),
                 AllowedSort::field('name'),
                 AllowedSort::field('mail'),
+                AllowedSort::field('enabled'),
                 AllowedSort::field('created_at'),
             ])
             ->defaultSort('code');
@@ -90,4 +91,3 @@ class UsersController extends Controller
         return response()->json($user);
     }
 }
-

@@ -35,4 +35,5 @@ Route::middleware(['web', 'auth:sanctum'])->group(function () {
     // News (unread list and mark as read)
     Route::get('/news/unread', [NewsController::class, 'unread']);
     Route::post('/news/read', [NewsController::class, 'markRead']);
+    Route::get('/news/{id}', [NewsController::class, 'show']);
 });

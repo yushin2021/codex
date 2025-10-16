@@ -9,10 +9,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('Password!1');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [flash, setFlash] = useState<string | null>(location?.state?.flash ?? null);
+  const [flash] = useState<string | null>(location?.state?.flash ?? null);
 
   useEffect(() => {
-    // 表示後は履歴の state を消して、戻る/再表示で重複しないようにする
     if (location?.state?.flash) {
       nav('/login', { replace: true, state: {} });
     }
@@ -24,7 +23,7 @@ export default function LoginPage() {
     try {
       await initCsrf();
       await api.post('/api/login', { email, password });
-      nav('/');
+      nav('/home');
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'ログインに失敗しました');
     } finally {
@@ -56,3 +55,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

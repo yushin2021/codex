@@ -2,11 +2,12 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import Spinner from '../components/Spinner';
 
 type User = { id:number; code:string; name:string; mail:string; enabled:number };
 
 function useParamsState() {
-  const [sp, setSp] = useSearchParams();
+  const [sp] = useSearchParams();
   const nav = useNavigate();
   const update = (patch:Record<string,string|number|undefined>) => {
     const next = new URLSearchParams(sp as any);
@@ -30,13 +31,25 @@ export default function UsersListPage() {
     queryKey: ['users', q, enabled, sort, dir, page],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (q) params.set('filter[q]', q); // spatie query builder uses filter[q]
+      if (q) params.set('filter[q]', q);
       if (enabled!=='' && (enabled==='0'||enabled==='1')) params.set('filter[enabled]', enabled);
       params.set('sort', (dir==='desc' ? '-' : '') + sort);
       params.set('page', page);
       const url = `/api/users?${params.toString()}`;
       const res = await api.get(url);
-      return res.data;
+      const raw = res.data;
+      if (!raw?.meta && typeof raw?.current_page !== 'undefined') {
+        return {
+          data: raw.data,
+          meta: {
+            current_page: raw.current_page,
+            last_page: raw.last_page,
+            per_page: raw.per_page,
+            total: raw.total,
+          },
+        } as any;
+      }
+      return raw;
     },
     keepPreviousData: true,
   });
@@ -46,7 +59,7 @@ export default function UsersListPage() {
     update({ sort: key, dir: nextDir, page: 1 });
   };
 
-  if (isLoading) return <p>読み込み中...</p>;
+  if (isLoading) return <Spinner className="py-10" />;
   if (error) return <p className="text-red-500">読み込みに失敗しました</p>;
 
   const rows: User[] = data?.data ?? [];
@@ -97,13 +110,42 @@ export default function UsersListPage() {
       </div>
 
       {meta && (
-        <div className="mt-3 flex items-center gap-2">
-          <button className="px-2 py-1 border rounded" disabled={!meta?.links?.prev} onClick={()=>update({ page: Math.max(1, Number(page)-1) })}>前へ</button>
-          <span className="text-sm">{meta.current_page} / {meta.last_page}</span>
-          <button className="px-2 py-1 border rounded" disabled={!meta?.links?.next} onClick={()=>update({ page: Number(page)+1 })}>次へ</button>
+        <div className="mt-3 flex items-center flex-wrap gap-2">
+          <button className="px-2 py-1 border rounded" disabled={meta.current_page<=1} onClick={()=>update({ page: 1 })}>最初</button>
+          <button className="px-2 py-1 border rounded" disabled={meta.current_page<=1} onClick={()=>update({ page: Math.max(1, Number(page)-1) })}>前へ</button>
+          {buildPages(meta.current_page, meta.last_page).map((p) => (
+            <button
+              key={p.key}
+              disabled={p.disabled}
+              onClick={()=>{ if(typeof p.page==='number') update({ page: p.page }); }}
+              className={`px-3 py-1 rounded border ${p.active ? 'bg-blue-600 text-white border-blue-600' : ''}`}
+            >
+              {p.label}
+            </button>
+          ))}
+          <button className="px-2 py-1 border rounded" disabled={meta.current_page>=meta.last_page} onClick={()=>update({ page: Number(page)+1 })}>次へ</button>
+          <button className="px-2 py-1 border rounded" disabled={meta.current_page>=meta.last_page} onClick={()=>update({ page: meta.last_page })}>最後</button>
         </div>
       )}
     </div>
   );
 }
 
+function buildPages(current:number, last:number) {
+  const pages: { key:string; label:string|number; page:number|undefined; active?:boolean; disabled?:boolean }[] = [];
+  const window = 2;
+  const start = Math.max(1, current - window);
+  const end = Math.min(last, current + window);
+  if (start > 1) {
+    pages.push({ key: 'p1', label: 1, page: 1 });
+    if (start > 2) pages.push({ key: 'dots-start', label: '…', page: undefined, disabled: true });
+  }
+  for (let p = start; p <= end; p++) {
+    pages.push({ key: `p${p}`, label: p, page: p, active: p === current });
+  }
+  if (end < last) {
+    if (end < last - 1) pages.push({ key: 'dots-end', label: '…', page: undefined, disabled: true });
+    pages.push({ key: `plast`, label: last, page: last });
+  }
+  return pages;
+}

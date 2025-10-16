@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import Spinner from '../components/Spinner';
 
 type NewsItem = { id:number; type:number; title:string; created_timestamp:string };
 
@@ -18,7 +19,7 @@ export default function TopPage() {
     setOpenId(null);
   };
 
-  if (isLoading) return <p>読み込み中...</p>;
+  if (isLoading) return <Spinner className="py-10" />;
   if (error) return <p className="text-red-500">読み込みに失敗しました</p>;
 
   const items: NewsItem[] = data?.data ?? [];
@@ -44,9 +45,8 @@ export default function TopPage() {
 
       {openId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center" onClick={()=>setOpenId(null)}>
-          <div className="bg-white rounded shadow p-6 w-full max-w-md" onClick={e=>e.stopPropagation()}>
-            <h3 className="font-semibold">詳細</h3>
-            <p className="text-sm text-gray-600 mt-2">このAPIは概要のみを返します。必要に応じて詳細APIを実装してください。</p>
+          <div className="bg-white rounded shadow p-6 w-full max-w-md mx-3" onClick={e=>e.stopPropagation()}>
+            <ModalBody id={openId} />
             <div className="mt-4 flex justify-end gap-2">
               <button className="px-3 py-1 rounded" onClick={()=>setOpenId(null)}>閉じる</button>
               <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={()=>markRead(openId)}>既読にする</button>
@@ -58,3 +58,18 @@ export default function TopPage() {
   );
 }
 
+function ModalBody({ id }: { id: number }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['news','detail', id],
+    queryFn: async () => (await api.get(`/api/news/${id}`)).data,
+  });
+  if (isLoading) return <Spinner />;
+  if (error) return <p className="text-red-500">読み込みに失敗しました</p>;
+  return (
+    <div>
+      <h3 className="font-semibold text-lg">{data.title}</h3>
+      <div className="text-xs text-gray-500">{new Date(data.created_timestamp).toLocaleString()}</div>
+      <div className="mt-3 whitespace-pre-wrap text-sm text-gray-800">{data.content}</div>
+    </div>
+  );
+}
